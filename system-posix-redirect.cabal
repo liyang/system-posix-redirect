@@ -25,6 +25,10 @@ Extra-source-files: include/*.h
                     cbits/*.c
 Cabal-Version: >= 1.6
 
+Source-Repository head
+  Type:     git
+  Location: https://github.com/liyang/system-posix-redirect
+
 Library
   Exposed-modules:      System.Posix.Redirect
   Extensions:           ForeignFunctionInterface,
