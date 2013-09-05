@@ -41,6 +41,8 @@ import System.IO
 import Foreign
 import Foreign.C.Types
 
+import Data.ByteString as BS
+
 import Control.Concurrent
 import Control.Exception
 
@@ -53,7 +55,7 @@ dupTo_ a b = dupTo a b >>= \_ -> return ()
 -- descriptor is restored.  Use with care: if there are any file
 -- handles with this descriptor that have unflushed buffers, they will
 -- not flush to the old file descriptor, but the new file descriptor.
-unsafeRedirectWriteFd :: Fd -> IO a -> IO (String, a)
+unsafeRedirectWriteFd :: Fd -> IO a -> IO (ByteString, a)
 unsafeRedirectWriteFd fd f = do
     -- setup
     (rfd, wfd) <- createPipe
@@ -62,17 +64,14 @@ unsafeRedirectWriteFd fd f = do
     -- fork a thread to consume output
     outMVar <- newEmptyMVar
     outHandle <- fdToHandle rfd
-    out <- hGetContents outHandle
-    _ <- forkIO $ do
-        _ <- evaluate (length out)
-        putMVar outMVar ()
+    _ <- forkIO (BS.hGetContents outHandle >>= putMVar outMVar)
     -- run the code
     r <- f
     -- cleanup
     dupTo_ old fd
     closeFd wfd
     -- wait for output
-    takeMVar outMVar
+    out <- takeMVar outMVar
     hClose outHandle
     return (out, r)
 
@@ -81,7 +80,7 @@ unsafeRedirectWriteFd fd f = do
 -- end of a pipe that @fd@ now points to.  This function appropriately
 -- flushes the Haskell @oldHandle@ and the C @oldCHandle@ before
 -- and after @f@'s execution.
-redirectWriteHandle :: Fd -> Handle -> Ptr FILE -> IO a -> IO (String, a)
+redirectWriteHandle :: Fd -> Handle -> Ptr FILE -> IO a -> IO (ByteString, a)
 redirectWriteHandle oldFd oldHandle cOldHandle f = do
     hFlush oldHandle
     hFlush stdout
@@ -94,14 +93,14 @@ redirectWriteHandle oldFd oldHandle cOldHandle f = do
 
 -- | @'redirectStdout f' redirects standard output during the execution
 -- of @f@ into a pipe passed as the first argument to @f@.
-redirectStdout :: IO a -> IO (String, a)
+redirectStdout :: IO a -> IO (ByteString, a)
 redirectStdout f = do
     c_stdout <- cio_stdout
     redirectWriteHandle stdOutput stdout c_stdout f
 
 -- | @'redirectStderr f' redirects standard error during the execution
 -- of @f@ into a pipe passed as the first argument to @f@.
-redirectStderr :: IO a -> IO (String, a)
+redirectStderr :: IO a -> IO (ByteString, a)
 redirectStderr f = do
     c_stderr <- cio_stderr
     redirectWriteHandle stdError stderr c_stderr f
