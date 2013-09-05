@@ -1,5 +1,5 @@
 Name:               system-posix-redirect
-Version:            1.0.0.1
+Version:            1.1
 Synopsis:           A toy module that allows you to temporarily redirect
                     a program's stdout.
 Description:        Due to the design of POSIX, it is possible to
