@@ -91,14 +91,14 @@ redirectWriteHandle oldFd oldHandle cOldHandle f = do
         _ <- c_fflush cOldHandle
         return r
 
--- | @'redirectStdout f' redirects standard output during the execution
+-- | @'redirectStdout' f@ redirects standard output during the execution
 -- of @f@ into a pipe passed as the first argument to @f@.
 redirectStdout :: IO a -> IO (ByteString, a)
 redirectStdout f = do
     c_stdout <- cio_stdout
     redirectWriteHandle stdOutput stdout c_stdout f
 
--- | @'redirectStderr f' redirects standard error during the execution
+-- | @'redirectStderr' f@ redirects standard error during the execution
 -- of @f@ into a pipe passed as the first argument to @f@.
 redirectStderr :: IO a -> IO (ByteString, a)
 redirectStderr f = do
