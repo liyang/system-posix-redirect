@@ -16,9 +16,9 @@ Description:        Due to the design of POSIX, it is possible to
                     dangerously...
 License:            BSD3
 License-file:       LICENSE
-Author:             Galois Inc.
-Maintainer:         ezyang@galois.com
-Copyright:          (c) 2010 Galois Inc.
+Author:             Galois Inc., Liyang HU
+Maintainer:         system-posix-redirect@liyang.hu
+Copyright:          (c) 2010 Galois Inc, 2013 Liyang HU
 Category:           System
 Build-type:         Simple
 Extra-source-files: include/*.h
