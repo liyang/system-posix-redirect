@@ -34,6 +34,8 @@ module System.Posix.Redirect
     , unsafeRedirectWriteFd
     ) where
 
+import Control.Monad.IO.Class
+import Control.Monad.CatchIO as M
 import System.Posix.Types
 import System.Posix.IO
 import System.IO
@@ -55,54 +57,61 @@ dupTo_ a b = dupTo a b >>= \_ -> return ()
 -- descriptor is restored.  Use with care: if there are any file
 -- handles with this descriptor that have unflushed buffers, they will
 -- not flush to the old file descriptor, but the new file descriptor.
-unsafeRedirectWriteFd :: Fd -> IO a -> IO (ByteString, a)
-unsafeRedirectWriteFd fd f = do
-    -- setup
-    (rfd, wfd) <- createPipe
-    old <- dup fd
-    dupTo_ wfd fd
+unsafeRedirectWriteFd :: (MonadIO m, MonadCatchIO m) => Fd -> m a -> m (ByteString, a)
+unsafeRedirectWriteFd fd f = M.bracketOnError setup cleanup $ \args@(rfd, _old, _fd, _wfd) -> do
     -- fork a thread to consume output
-    outMVar <- newEmptyMVar
-    outHandle <- fdToHandle rfd
-    _ <- forkIO (BS.hGetContents outHandle >>= putMVar outMVar)
+    outMVar <- liftIO newEmptyMVar
+    outHandle <- liftIO $ fdToHandle rfd
+    _ <- liftIO $ forkIO (BS.hGetContents outHandle >>= putMVar outMVar)
     -- run the code
     r <- f
     -- cleanup
-    dupTo_ old fd
-    closeFd wfd
+    cleanup args
     -- wait for output
-    out <- takeMVar outMVar
-    hClose outHandle
+    out <- liftIO $ takeMVar outMVar
+    liftIO $ hClose outHandle
     return (out, r)
+    where setup = liftIO $ do
+            (rfd, wfd) <- createPipe
+            old <- dup fd
+            dupTo_ wfd fd
+            return (rfd, old, fd, wfd)
+          cleanup = \(_rfd, old, fd, wfd) -> liftIO $ do
+            dupTo_ old fd
+            closeFd wfd
 
 -- | @'redirectWriteHandle' oldFd oldHandle oldCHandle f@ executes the
 -- computation @f@, passing as an argument a handle which is the read
 -- end of a pipe that @fd@ now points to.  This function appropriately
 -- flushes the Haskell @oldHandle@ and the C @oldCHandle@ before
 -- and after @f@'s execution.
-redirectWriteHandle :: Fd -> Handle -> Ptr FILE -> IO a -> IO (ByteString, a)
+redirectWriteHandle :: (MonadIO m, MonadCatchIO m) => Fd -> Handle -> Ptr FILE -> m a -> m (ByteString, a)
 redirectWriteHandle oldFd oldHandle cOldHandle f = do
-    hFlush oldHandle
-    hFlush stdout
-    _ <- c_fflush cOldHandle
+    liftIO $ do
+        hFlush oldHandle
+        hFlush stdout
+        _ <- c_fflush cOldHandle
+        return ()
     unsafeRedirectWriteFd oldFd $ do
         r <- f
-        hFlush oldHandle
-        _ <- c_fflush cOldHandle
+        liftIO $ do
+            hFlush oldHandle
+            _ <- c_fflush cOldHandle
+            return ()
         return r
 
 -- | @'redirectStdout' f@ redirects standard output during the execution
 -- of @f@ into a pipe passed as the first argument to @f@.
-redirectStdout :: IO a -> IO (ByteString, a)
+redirectStdout :: (MonadIO m, MonadCatchIO m) => m a -> m (ByteString, a)
 redirectStdout f = do
-    c_stdout <- cio_stdout
+    c_stdout <- liftIO cio_stdout
     redirectWriteHandle stdOutput stdout c_stdout f
 
 -- | @'redirectStderr' f@ redirects standard error during the execution
 -- of @f@ into a pipe passed as the first argument to @f@.
-redirectStderr :: IO a -> IO (ByteString, a)
+redirectStderr :: (MonadIO m, MonadCatchIO m) => m a -> m (ByteString, a)
 redirectStderr f = do
-    c_stderr <- cio_stderr
+    c_stderr <- liftIO cio_stderr
     redirectWriteHandle stdError stderr c_stderr f
 
 ---------------------------------------------------
