@@ -36,6 +36,7 @@ module System.Posix.Redirect
     ) where
 
 import Control.Concurrent
+import Control.Exception
 import Control.Monad
 
 import Data.ByteString as BS
@@ -64,10 +65,10 @@ unsafeRedirectWriteFd fd f = do
     outHandle <- fdToHandle rfd
     void $ forkIO (BS.hGetContents outHandle >>= putMVar outMVar)
     -- run the code
-    r <- f
-    -- cleanup
-    void $ dupTo old fd
-    closeFd wfd
+    r <- f `finally` do
+        -- cleanup
+        void $ dupTo old fd
+        closeFd wfd
     -- wait for output
     out <- takeMVar outMVar
     hClose outHandle
