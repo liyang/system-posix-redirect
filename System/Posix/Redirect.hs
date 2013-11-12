@@ -55,14 +55,10 @@ import System.Posix.Types
 -- handles with this descriptor that have unflushed buffers, they will
 -- not flush to the old file descriptor, but the new file descriptor.
 unsafeRedirectWriteFd :: Fd -> IO a -> IO (ByteString, a)
-unsafeRedirectWriteFd fd f = do
-    -- setup
-    (rfd, wfd) <- createPipe
-    old <- dup fd
-    void $ dupTo wfd fd
+unsafeRedirectWriteFd fd f = bracket setup (hClose . fst) $
+        \ (outHandle, (wfd, old)) -> do
     -- fork a thread to consume output
     outMVar <- newEmptyMVar
-    outHandle <- fdToHandle rfd
     void $ forkIO (BS.hGetContents outHandle >>= putMVar outMVar)
     -- run the code
     r <- f `finally` do
@@ -71,8 +67,14 @@ unsafeRedirectWriteFd fd f = do
         closeFd wfd
     -- wait for output
     out <- takeMVar outMVar
-    hClose outHandle
     return (out, r)
+  where
+    setup = do
+        (rfd, wfd) <- createPipe
+        old <- dup fd
+        void $ dupTo wfd fd
+        outHandle <- fdToHandle rfd
+        return (outHandle, (wfd, old))
 
 -- | @'redirectWriteHandle' oldFd oldHandle oldCHandle f@ executes the
 -- computation @f@, passing as an argument a handle which is the read
