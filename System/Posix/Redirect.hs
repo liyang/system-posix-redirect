@@ -35,17 +35,16 @@ module System.Posix.Redirect
     , unsafeRedirectWriteFd
     ) where
 
-import System.Posix.Types
-import System.Posix.IO
-import System.IO
+import Control.Concurrent
+
+import Data.ByteString as BS
 
 import Foreign
 import Foreign.C.Types
 
-import Data.ByteString as BS
-
-import Control.Concurrent
-import Control.Exception
+import System.IO
+import System.Posix.IO
+import System.Posix.Types
 
 dupTo_ :: Fd -> Fd -> IO ()
 dupTo_ a b = dupTo a b >>= \_ -> return ()
