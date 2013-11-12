@@ -1,39 +1,41 @@
-Name:               system-posix-redirect
-Version:            1.1
-Synopsis:           A toy module that allows you to temporarily redirect
-                    a program's stdout.
-Description:        Due to the design of POSIX, it is possible to
-                    temporarily overload the file descriptors
-                    corresponding to stdout and stderr to point to an
-                    arbitrary pipe.  It is, however, tricky to get
-                    right.  This module gets it right, as far as such
-                    a terrible hack can be made right.  It can be used
-                    to make misbehaving third-party C libraries stop
-                    spewing to standard output. Warning: the module
-                    author has concluded that due to lack of
-                    portability, this module should not be used in any
-                    serious sytem.  But, for those who like living
-                    dangerously...
-License:            BSD3
-License-file:       LICENSE
-Author:             Galois Inc., Liyang HU
-Maintainer:         system-posix-redirect@liyang.hu
-Copyright:          (c) 2010 Galois Inc, 2013 Liyang HU
-Category:           System
-Build-type:         Simple
-Extra-source-files: include/*.h
-                    cbits/*.c
-Cabal-Version: >= 1.6
+name: system-posix-redirect
+version: 1.1
+synopsis: A toy module to temporarily redirect a program's stdout.
+description:
+    Due to the design of POSIX, it is possible to temporarily overload the
+    file descriptors corresponding to stdout and stderr to point to an
+    arbitrary pipe. It is, however, tricky to get right. This module gets
+    it right, as far as such a terrible hack can be made right. It can be
+    used to make misbehaving third-party C libraries stop spewing to
+    standard output. Warning: the module author has concluded that due to
+    lack of portability, this module should not be used in any serious
+    sytem. But, for those who like living dangerously...
+license: BSD3
+license-file: LICENSE
+author: Galois Inc., Liyang HU
+maintainer: system-posix-redirect@liyang.hu
+copyright: (c) 2010 Galois Inc, 2013 Liyang HU
+category: System
+build-type: Simple
+extra-source-files:
+    include/hsredirect.h
+    cbits/hsredirect.c
+cabal-version: >= 1.6
 
-Source-Repository head
-  Type:     git
-  Location: https://github.com/liyang/system-posix-redirect
+source-repository head
+    type: git
+    location: https://github.com/liyang/system-posix-redirect
 
-Library
-  Exposed-modules:      System.Posix.Redirect
-  Extensions:           ForeignFunctionInterface,
-                        EmptyDataDecls
-  Build-depends:        base >= 4 && < 5, bytestring >= 0.9, unix >= 2.4.0
-  C-sources:            cbits/hsredirect.c
-  Include-dirs:         include
-  Install-includes:     include/hsredirect.h
+library
+    exposed-modules:
+        System.Posix.Redirect
+    extensions:
+        ForeignFunctionInterface,
+        EmptyDataDecls
+    build-depends:
+        base >= 4 && < 5,
+        bytestring >= 0.9,
+        unix >= 2.4.0
+    c-sources: cbits/hsredirect.c
+    include-dirs: include
+    install-includes: include/hsredirect.h
