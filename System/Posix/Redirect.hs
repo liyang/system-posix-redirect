@@ -36,18 +36,16 @@ module System.Posix.Redirect
     ) where
 
 import Control.Concurrent
+import Control.Monad
 
 import Data.ByteString as BS
 
-import Foreign
 import Foreign.C.Types
+import Foreign.Ptr
 
 import System.IO
 import System.Posix.IO
 import System.Posix.Types
-
-dupTo_ :: Fd -> Fd -> IO ()
-dupTo_ a b = dupTo a b >>= \_ -> return ()
 
 -- | @'unsafeRedirectFd' fd f@ executes the computation @f@, passing as
 -- an argument a handle which is the read end of a pipe that
@@ -60,15 +58,15 @@ unsafeRedirectWriteFd fd f = do
     -- setup
     (rfd, wfd) <- createPipe
     old <- dup fd
-    dupTo_ wfd fd
+    void $ dupTo wfd fd
     -- fork a thread to consume output
     outMVar <- newEmptyMVar
     outHandle <- fdToHandle rfd
-    _ <- forkIO (BS.hGetContents outHandle >>= putMVar outMVar)
+    void $ forkIO (BS.hGetContents outHandle >>= putMVar outMVar)
     -- run the code
     r <- f
     -- cleanup
-    dupTo_ old fd
+    void $ dupTo old fd
     closeFd wfd
     -- wait for output
     out <- takeMVar outMVar
@@ -84,11 +82,11 @@ redirectWriteHandle :: Fd -> Handle -> Ptr FILE -> IO a -> IO (ByteString, a)
 redirectWriteHandle oldFd oldHandle cOldHandle f = do
     hFlush oldHandle
     hFlush stdout
-    _ <- c_fflush cOldHandle
+    void $ c_fflush cOldHandle
     unsafeRedirectWriteFd oldFd $ do
         r <- f
         hFlush oldHandle
-        _ <- c_fflush cOldHandle
+        void $ c_fflush cOldHandle
         return r
 
 -- | @'redirectStdout' f@ redirects standard output during the execution
