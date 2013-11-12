@@ -1,4 +1,5 @@
-{-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 
 {- |
 Module      : System.Posix.Redirect
